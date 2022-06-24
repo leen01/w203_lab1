@@ -40,7 +40,11 @@ You design the following test to evaluate your aunt's claim:  You flip the coins
 Your null hypothesis is that $p=1/2$, and you plan to reject the null if your test statistic is 0 or 6. 
 
 1. What is the type 1 error rate of your test?
+The probability of the sume $X_1$ and $Y_1$ equal to 0 under the null hypothesis is 1/4. For all three trials the probability of the sums being equal to 0 or 6 is $2 * (1/4)^3$. The $alpha$ of this test is $1/32$ or $0.03125$.
 2. What is the power of your test for the alternate hypothesis that $p=3/4$?
+The power of the test for the alternative hypothesis test is $1 - Beta$. The test statistic that the alternative hypothesis is $p = 3/4$. Would the null hypothesis for this be that the p = 3/4 and if we fail to reject the null hypothesis then we have some evdience that it is p = 3/4? Then $beta$ is equal to the probability that 1 - P(H = 0 U H = 6) = 1 - 2(3/8)^3 = 1 - 0.052734375 = 0.947265625. 
+
+Or is it that we have the p = 1/2 as the null and the power is $ P(Fail to reject H_o | H_o is not true) = 1 - (Sum != 0 or sum != 6)$. Then the power of the test is $1 - 0.03125 = 0.96875$. 
 
 \newpage
 ## Wrong Test, Right Data
@@ -68,6 +72,7 @@ List all assumptions for a two-sample t-test. Then evaluate each assumption, pre
 The file [`datasets/legislators-current.csv`](./datasets/legislators-current.csv) is taken from the [congress-legislators project](https://github.com/unitedstates/congress-legislators) on Github.  You would like to test whether Democratic or Republican senators are older.
 
 List all assumptions for a Wilcoxon rank-sum test (using the Hypothesis of Comparisons). Then evaluate each assumption, presenting evidence based on your background knowledge, visualizations, and numerical summaries.
+$\alpha$ e null hypothesis is that $\mu_1$ - $\mu_2$ = $\Delta_0$
 
 ### Wine and health
 The dataset `wine` can be accessed by installing the `wooldridge` package.  

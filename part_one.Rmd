@@ -20,8 +20,107 @@ output:
 ### World Happiness
 
 ### Legislators
+####
+  # By: Nicholas Lee
+  # Purpose: Lab 1
+  # Date: 06/20/2022
+####
+  # Libraries
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+
+#### Question: 
+  # You would like to test whether Democratic or Republican senators are older. 
+  # List all assumptions for a Wilcoxon rank-sum test (using the Hypothesis of Comparisons). 
+  # Then evaluate each assumption, presenting evidence based on your background knowledge, 
+  # visualizations, and numerical summaries
+
+  # Wilcoxon Rank-sum test: 
+  # Data must at least be ordinal
+  # Not too many ties: True
+  # Grouping variable defined: Party
+  # Not a substantial difference between group sizes: True
+  # IID across samples, may be a problem with geography:
+    # Some areas in the US are typically right or left leaning so there might be a bias for the state to select senators from a certain party. 
+    # 
+  # Continuous data, i.e. non binary, assumption met: 
+    # The data is finite since people, but could be born on any day, since we are given a date but not a time. This is discrete data I believe as measured
+
+data <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/legislators-current.csv", 
+                 sep = ",", header = T)
+
+  # Quick view into dataset.
+colnames(data)
+summary(data)
+
+  # create a column that gets the senators age from birthday
+data$age = as.numeric(difftime(Sys.Date(), data$birthday,  units = 'weeks'))/52.25
+
+  # checking mean age of groups
+data %>% 
+  group_by(party) %>% 
+  summarize(
+    n = length(age),
+    mean_age = mean(age),
+    std = sd(age)
+  )
+  # Shape of the data
+aggregate(age ~ party, data = data, mean)
+aggregate(age ~ party, data = data, sd)
+  # Test assumption that the size is not substantially different between groups
+aggregate(age ~ party, data = data, length)
+aggregate(age ~ party, data, FUN = function(x) sum(x != "N/A"), na.action = NULL)
+
+  # Checking for number of ties aka same birthday
+length(unique(data$birthday))
+n_table <- data.frame(table(data$age))
+
+#### Visualizations
+data$year <- format(as.Date(data$birthday, format="%Y-%m-%d"),"%Y")
+year_bins <- length(unique(data$year))
+g <- ggplot(data, aes(x = age, color = party)) + geom_histogram(bins = 20, alpha = 0.5)
+data %>% group_by(party) %>% summarize(mean(data$age))[1]
+g + geom_vline(xintercept = c(data %>%group_by(party) %>% summarize( mean_age = mean(age))))
+g
+  # add a mean line for each group
+#### Answer
+
+
 
 ### Wine and health
 
 ### Attitudes toward the religious
+#### paired T-test assumptions: 
+1. Metric scale
+2. Requires data support basic math operations
+3. Requires data supports calculation of mean and variance
+4. IID across all samples
+5. Dependence within samples
+6. Same number of samples for both measures
+7. Sample size is greater than or equal to 30 not too much skew for CLT
+8. Assertion in null hypothesis about mean difference
+9. Not dramatically different distributions in shapes across random variables
+10. Continuous data or continous form, ie. non binary data.
+#### evaluation of  T-test assumptions: 
+##### Load data
+df2 <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/GSS_religion.csv", sep = ",", header = T)
+1. Metric scale
+2. Requires data support basic math operations
+3. Requires data supports calculation of mean and variance
+4. IID across all samples
+5. Dependence within samples
+6. Same number of samples for both measures
+7. Sample size is greater than or equal to 30 not too much skew for CLT
+8. Assertion in null hypothesis about mean difference
+9. Not dramatically different distributions in shapes across random variables
+10. Continuous data or continous form, ie. non binary data.
+
+
+
+                 
+#### Summarize data
+summary(df2)
+
+
 
