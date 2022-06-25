@@ -91,6 +91,7 @@ g
 ### Wine and health
 
 ### Attitudes toward the religious
+The question is whether the US population feels more positive towards Protestants or towards Catholics. 
 #### paired T-test assumptions: 
 1. Metric scale
 2. Requires data support basic math operations
@@ -103,6 +104,62 @@ g
 9. Not dramatically different distributions in shapes across random variables
 10. Continuous data or continous form, ie. non binary data.
 #### evaluation of  T-test assumptions: 
+```{r}
+# set working directory
+setwd("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets")
+# load the dataset
+rel_df <- read.csv("./GSS_religion.csv")
+```
+1. Metric scale
+- The data is not on a metric scale. It appears so by using a number to gauge people's feelings about the two different religions. The data is ordinal, like a Likert scale, where 0 - 100 is dislike to like and all the numbers in between can vary. There is not set interval or measurement between 1 degree in this scale. There is no way to generalize what one degree is across different people. It is not continuous becauase people are not likley to give a infinitely long number. We are working with interval numbers. It detracts from the nuance in the data, but I would suggest that the data be recoded so that less than 50 as negative (0) and greater than 50 is a positive (1) for prottemp and cathtemp. 
+2. Requires data support basic math operations
+- The data as coded would support basic math operations. 
+3. Requires data supports calculation of mean and variance
+- We could calculate the mean and variance as coded. Because this data is not metric, the meaning
+4. IID across all samples
+- According to https://www.thearda.com/Archive/Files/Descriptions/GSS2004.asp
+- "(i) the construction of a new list-assisted sampling frame for 72% of the population; (ii) an increase in the size of the certainty stratum (the proportion of the population covered by certainty area selections); (iii) designation of new primary sampling units (PSUs) for the certainty stratum; (iv) designation of new secondary sampling units (SSUs) for the remaining "urban" areas; and (v) designation of larger SSUs for the remaining areas."
+- The collection proceedure were conducting 90 minute interviews with people. 
+5. Dependence within samples
+- It is taken from the same person and the regligions are closely related, under the Christianity umbrella, so attitudes are likley similar depending on the person. Someone who is a christian might be either protestant or catholic and they may have a bias towards one or the other. This would be an assumption with the given dataset. 
+6. Same number of samples for both measures
+```{r}
+library(dplyr)
+rel_df %>% summarize(
+  n_prottemp = length(prottemp),
+  n_cathtemp = length(cathtemp),
+  mean_prottemp = mean(prottemp),
+  mean_cathtemp = mean(cathtemp)
+)
+summary(df2)
+```
+There are the same number of measurements for both variables. 
+7. Sample size is greater than or equal to 30 not too much skew for CLT
+- The sample size is greater than 30. 
+```{r}
+# Checking for skew
+library(ggplot2)
+library(reshape)
+d <- melt(df2, measure.vars = c('prottemp', 'cathtemp'), variable.name = "religion")
+g <- ggplot(data = d, aes(x = variable, y = value))
+g + geom_boxplot()
+```
+8. Assertion in null hypothesis about mean difference
+
+9. Not dramatically different distributions in shapes across random variables
+-Based on the boxplot there is no dramatic difference in the shape of the measurements. Upon further exploration it appears that people generally picked whole numbers. The attitudes appear to be shifted left, most of the values are on the positive side. 
+```{r}
+# ggplot(data = d, aes(x = value, fill = variable)) +geom_bar(position = 'dodge', width = 4)
+ggplot(data = d, aes(x = value, color = variable)) +geom_histogram()
+```
+```{r}
+
+count(df2[df2$prottemp < 50,])
+count(df2[df2$prottemp > 50,])
+count(df2[df2$prottemp == 50,])
+```
+10. Continuous data or continous form, ie. non binary data.
+-The variables prottemp and cathtemp are not continuous, they are ordinal, so this assumption is not met. 
 ##### Load data
 df2 <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/GSS_religion.csv", sep = ",", header = T)
 1. Metric scale
@@ -115,12 +172,5 @@ df2 <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/d
 8. Assertion in null hypothesis about mean difference
 9. Not dramatically different distributions in shapes across random variables
 10. Continuous data or continous form, ie. non binary data.
-
-
-
-                 
-#### Summarize data
-summary(df2)
-
 
 
