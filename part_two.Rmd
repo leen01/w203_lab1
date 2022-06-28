@@ -1,11 +1,265 @@
 ---
 title: "Part Two"
-author: "PUT YOUR GROUP NAMES HERE"
-date: "2/14/2022"
+author: "Ange Iradukundaf, Nicholas Lee, Will Dudek"
+date: "6/28/2022"
 output:
-  pdf_document:
+  bookdown::pdf_document2: 
     toc: true
     number_sections: true
     toc_depth: 3
 ---
 
+```{r load packages, set options, functions, include = FALSE}
+# Load the libraries
+
+library(dplyr)
+library(tidyr)
+library(haven)
+library(sjlabelled)
+library(reshape)
+library(ggplot2)
+library(knitr)
+library(rlang)
+library(car)
+library(tidyverse)
+# library(GGally)
+# library(magrittr)
+
+options(tinytex.verbose = TRUE)
+knitr::opts_chunk$set(echo=FALSE, message=FALSE)
+
+# Function to make summarizing easier
+variable_summary <- function(dfv, v){
+  cat('Variable name:', get_label(dfv[v]), "\n")
+  summary(sjlabelled::as_label(dfv[v], drop.levels = TRUE))
+}
+```
+
+```{r load SPSS data file, include = FALSE}
+# Load data
+file <- "./anes_timeseries_2020_spss_20220210.sav"
+df <- haven::read_sav(file)
+nrow_original <- nrow(df)
+```
+
+```{r variables of interest}
+# Variables
+group_rv <- 'V201228'
+main_rv <- 'V202119'
+subq_rv <- c(grep("V202120.", colnames(df), value = TRUE), 'V202121', 'V202066', 'V202117')
+full_rv_list <- c(group_rv, main_rv, subq_rv)
+```
+
+```{r cleaning and create working dataset}
+# removing any rows that are not either the main two parties, Democrate or Republican
+# removing any values less than 0 since these mark reasons data is missing. For our purposes this is not of use
+wdf <- df[full_rv_list]
+wdf <- wdf[wdf[[group_rv]] %in% c(1, 2),]
+wdf <- wdf[wdf[[main_rv]] > 0,]
+
+nrow_wdf <- nrow(wdf)
+```
+
+```{r, include = FALSE}
+# for (i in full_rv_list) {
+#   # print(get_label(wdf[i]))
+#   if (length(variable_summary(i)) <= 2) {
+#     # print('No use, variable has limited values')
+#   }
+#   else{
+#     # print(addmargins(prop.table(table(
+#       label <- sjlabelled::as_label(wdf[[i]], drop.levels = TRUE),
+#       party <- sjlabelled::as_label(wdf[[group_rv]], drop.levels = TRUE)
+#     ))))
+#   }
+#   }
+```
+
+```{r}
+#----------------------#
+# Difficulty Variables #
+#----------------------#
+# create difficulty_voting from V202119
+wdf$difficulty_voting <- wdf$V202119
+wdf$difficulty_voting[wdf$V202119 == -9 |
+                            wdf$V202119 == -7 | wdf$V202119 == -6 |
+                            wdf$V202119 == -5 | wdf$V202119 == -1] <- NA
+# summary(wdf$difficulty_voting)
+
+# create difficulty_voting_binary (0 if no difficulty, 1 if any level of difficulty)
+wdf$difficulty_voting_binary <- rep(NA, nrow(wdf))
+wdf$difficulty_voting_binary[wdf$difficulty_voting == 1] <-
+  0
+wdf$difficulty_voting_binary[wdf$difficulty_voting > 1] <- 1
+# summary(wdf$difficulty_voting_binary)
+
+# Recode sub question variables as NA if negative
+
+#before changes
+# paste(replicate(50, "-"), collapse = "")
+# print("Before")
+for (i in subq_rv){
+  # print(variable_summary(wdf, i))
+}
+
+# changes
+# paste(replicate(50, "-"), collapse = "")
+# print("Changes")
+for (i in subq_rv) {
+  wdf <- wdf %>% 
+    mutate(!!sym(i) := replace(!!sym(i), !!sym(i) < 0, NA))
+}
+# quality check, looking for no negative numbers
+# paste(replicate(50, "-"), collapse = "")
+# print("Afer")
+for (i in subq_rv){
+  # print(variable_summary(wdf, i))
+}
+```
+
+```{r}
+# Create variable summing difficulty responses
+# *** Very few responses have 1 for more than one V202120 variables...***
+# wdf$difficulty_sum <wdf$V202120a + wdf$V202120b + wdf$V202120c + wdf$V202120d
+# + wdf$V202120e + wdf$V202120f + wdf$V202120g
+
+# Creating var diff_any: 1 if respondents had difficulty in ANY V202120 category,
+# 0 if respondents did not have difficulty in ALL V202120 categories,
+
+# NA else
+wdf$diff_any <- rep(NA, nrow(wdf))
+wdf$diff_any[wdf$V202120a == 1 |
+                   wdf$V202120b == 1 | wdf$V202120c == 1 |
+                   wdf$V202120d == 1 |
+                   wdf$V202120e == 1 | wdf$V202120f == 1 |
+                   wdf$V202120g == 1] <- 1
+wdf$diff_any[wdf$V202120a == 0 &
+                   wdf$V202120b == 0 & wdf$V202120c == 0 &
+                   wdf$V202120d == 0 &
+                   wdf$V202120e == 0 & wdf$V202120f == 0 &
+                   wdf$V202120g == 0] <- 0
+
+# recoding wait time
+wdf$waitTime <- wdf$V202121
+wdf$waitTime[wdf$waitTime == -7 |
+                   wdf$waitTime == -6 | wdf$waitTime == -5
+                 | wdf$waitTime == -1] <- NA
+```
+
+```{=tex}
+\newpage
+\setcounter{page}{1}
+```
+# Importance and Context
+We are interested in whether Democrats or Republicans have had a more difficult time voting in the 2020 election. The potential impact of this research could include but is not limited to which demographics say the Republican party will want to target to increase voter turnout. This information could also be used by policy makers to remove barriers from those looking to vote, for example the difference in mail-in votes versus poll voting. To understand these issues, we will be using the American National Election Studies (ANES) survey from the 2020 Time Series Study. This study collected information for 1771 with 8280 participants. Participants were interviewed prior and post elections through various mediums, such as online surveys, video interviews, and phone calls. The wealth of information they have collected will help us to assess which party had a more difficult time voting. 
+ 
+This analysis contributes to the discussion of voter difficulty, focusing on two difficulties that appeared the most in the 2020 election: level of difficulty and waiting time . This analysis looks at addressing the following question: 
+ 
+Did Democratic voters or Republican voters experience more difficulty voting in the 2020 election?
+ 
+The target population for this question is policy makers (people who run campaigns )
+
+We did EDA to check for level of difficulty with X
+We could assume that there was some difficulty within these categories
+
+Looked further into variables that could explain why there were differences in difficulty between the two parties, for example waiting times. We found that ....
+
+Through our research we attempted to answer the question: 
+```{=tex}
+\begin{quote}
+  \textbf{Question:} \textit{Did Democratic voters or Republican voters experience more difficulty voting in the 2020 election?}
+\end{quote}
+```
+
+# Data and Methodology
+The data set we are using for our analysis comes from the American Naitional Election Studes (ANES). The data was collected through approximately 90 minute interviews through three different modalities (included self-administered online surveys, live video interviews conducted online, and telephone interviews.) from a cross section of residental addresses where mail is delievered in response to COVID-19 challenges. People were asked to participate via mail or email if they were unreachable by mail. The sample population form the dataset includes re-inter interviews starting in August of 2020 through the November 3rd (Election day). Post Election Day interviews were conducted through the end of December. There were re-interviews with 2016 ANES respondents and those were responded to post-election surveys from the General Social Survey. Participants were also granted monteary rewards for completing the survey. "The target population for the fresh cross-section was the 231 million non-institutional U.S. citizens aged 18 or older living in the 50 US states or the District of Columbia."..."This series of studies, known as the ANES "Time Series," constitutes a pre-election interview and a post-election interview during years of Presidential elections, and, usually, a post-election interview only during years of midterm elections. Topics cover voting behavior and the elections, together with questions on public opinion and attitudes."
+
+This data set consisted of `r nrow_original` people. We removed individuals who did not identify as either Democrat or Republican; did not respond; did not have a post-election interview; interview breakoff;  inapplicable; no post-election data and deleted due to incomplete interview to the surveyed questions. The new size of this data set was `r nrow_wdf`. Our main variable was interest was how an individual perceived the difficulty of voting. 
+
+```{=tex}
+\begin{quote}
+  \textbf{Null Hypothesis:} \textit{The probability that a member of the Democrat party having some level of difficulty is equal to the probability that a member of the Republican party having some level of difficulty}
+\end{quote}
+```
+
+```{r make summary table}
+summary_table_main <- addmargins(prop.table(table(
+  label <- sjlabelled::as_label(wdf[[main_rv]], drop.levels = TRUE),
+  party <- sjlabelled::as_label(wdf[[group_rv]], drop.levels = TRUE)
+)))
+```
+
+```{r}
+kable(
+  summary_table_main,
+  digits = 3,
+  caption = 'Difficulty Voting by Party',
+  booktabs = TRUE
+)
+```
+```{r}
+#plots
+# for (i in full_rv_list){
+# g <- ggplot(data = wdf, aes(x = sjlabelled::as_label(.data[[i]]), fill = sjlabelled::as_label(.data[[group_rv]])))
+# g <- g + geom_bar(position = position_dodge()) + 
+#   theme(axis.text.x = element_text(angle = 90))+
+#   xlab(get_label(wdf[[i]])) + ggtitle(paste(get_label(wdf[[i]]), 'Between Republican & Democratic')) +
+#   scale_fill_manual("Legend", values = c("2. Republican" = "red", "1. Democrat" = "blue"))
+# print(g)
+# }
+```
+
+# Results
+Our first inquiry into difficulty voting by party was to explore the variable V202119 (“How difficult was it for you to vote in this election?” which offers response categories on a Likert scale ranging from 1 (“Not difficult at all”) to 5 (“Extremely Difficult”). We are interested in comparing responses to this question to the political party variable (V2021228). Since the question provides no detail on the type or cause of difficulty, we are careful not to infer any causal relationship between political party and difficulty voting, nor make any inference as to the reason for that difficulty. Rather, this difficulty measure allows us to analyze differences between Democrats and Republicans in terms of respondents’ perceived sense of difficulty voting. 
+
+Our grouping variable, party, is measured at a binary categorical level, and our outcome variable is measured on a Likert scale. In this situation, we can use a Wilcoxon Rank-Sum test to explore differences in the outcome variable (difficulty voting) by the grouping variable (political party). 
+
+In order to use this test, data also must be generated via an i.i.d. process. The survey polls a random draw of US citizens 18-or-older by mailing address. Although some elements of the survey may introduce bias (for example, there is a monetary reward for responding) the randomness and sampling of the survey design by and large meet criteria for i.i.d. Due to the large sample size and random draw of mailing addresses.
+
+Proceeding with a Wilcoxon Rank-Sum test, our null hypothesis is: 
+```{=tex}
+\begin{quote}
+  \textbf{Null Hypothesis:} \textit{The median of the outcome variable, ‘difficulty voting’ is equal between Democrats and Republicans}
+\end{quote}
+```
+The test results present evidence that the median Likert scale value for difficulty voting is not equal between Democrats and Republicans (p=.006). A comparison between parties on the Likert scale reveals that the difference in difficulty voting between Democrats and Republicans varies in scale and in direction across each difficulty group. Therefore, it is difficult to say which party experiences more overall difficulty voting. However, by examining a row-wise proportion table of party and difficulty, we can see that among respondents who experienced any degree difficulty (groups 2-5), Republicans reported higher degrees of difficulty (groups 4,5) in greater proportion compared to Democrats, whereas Democrats reported lower degrees of difficulty (groups 2,3) in greater compared to Republicans. 
+
+	Still, these results are fairly inconclusive when it comes to addressing the question of “Did Democrats or Republicans experience more difficulty voting?”, so we decided to explore some variables that may point to more specific reasons for difficulty voting. 
+
+Party and Wait Time at the Polls
+
+Next, we explored wait time at the polls (V202121) as a measure of difficulty voting, comparing responses between Democrats and Republicans. Similar to the previous difficulty variable, the question “About how long was the wait time at your polling place” offers response categories on a 5-point Likert scale, ranging from 1 (0-15 minutes) to 5 (more than two hours). Since our grouping variable (party) is measured at a binary categorical level and our outcome variable (wait time) is measured on a Likert scale, we can use a Wilcoxon Rank-Sum test to explore differences between the two variables.
+
+The null hypothesis for our Wilcoxon Rank-Sum test is:
+
+```{=tex}
+\begin{quote}
+  \textbf{Null Hypothesis:} \textit{The median of the outcome variable (‘wait time at polling place’) is equal between Democrats and Republicans.}
+\end{quote}
+```
+
+The test result presents evidence that the median Likert scale value for wait time at the poll is not equal between Democrats and Republicans (p=.00001). A comparison between parties on the wait time scale reveals that Republicans had a higher proportion of experiences with minimal wait times (0-15min), whereas Democrats had a higher proportion of experiences with longer wait times (16min-more than 2 hours). We can therefore infer that Democrats experienced longer wait times than Republicans overall. 
+
+While the time spent voting is a logical measure of difficulty voting, the time a voter waits at a polling place is only one contributor to overall time spent voting— travel time to a polling place is another component of overall time spent voting, and it will be important to consider these two factors in conjunction before making any assumptions about overall time spent voting between parties. 
+
+Party and Travel Time to the Polls
+
+Accordingly, we also explored time spent traveling to the polls (V202122) as another measure of difficulty voting. The question (“about how long does it take to get to your polling place?”) has the exact same response categories as V202121 (wait time), and as a result meets the exact same assumptions for a Wilcoxon Rank-Sum test. 
+
+The null hypothesis for this test is:
+```{=tex}
+\begin{quote}
+  \textbf{Null Hypothesis:} \textit{The median Likert scale value for travel time to a polling place is equal between Democrats and Republicans.}
+\end{quote}
+```
+
+The test result presents evidence that the median Likert scale value for travel time is not equal between Democrats and Republicans (p=.002). A comparison between parties on the travel time scale reveals that Republicans had a higher proportion of experiences with minimal travel times (0-15minutes), whereas Democrats had a higher proportion of experiences in every other category, ranging from 16 minutes to more than 2 hours. Therefore, we can reasonably conclude that Democrats experienced longer travel times than Republicans overall. 
+
+Analyzing wait time alongside travel time gives us a more holistic sense of overall time spent voting. Since our tests suggest that Democrats experienced both longer wait times and longer travel times to polling places in comparison to Republicans, we can reasonably infer that Democrats had a more difficult time than Republicans when it comes to overall time spent voting. 
+
+There are some important limitations to the above results and interpretations: overall time spent voting is only one measure of difficulty voting. Consequently, we want to be careful not to argue that Democrats had more difficulty voting than Republicans in an overall sense. Rather, we would like to argue that, viewing difficulty voting in the specific context of time spent voting, it appears that Democrats had more difficulty than Republicans. 
+
+# Discussion
+Proceeding with a Wilcoxon Rank-Sum test, our null hypothesis is:
+	The median of the outcome variable, ‘difficulty voting’ is equal between Democrats and Republicans.
+The test results present evidence that the median Likert scale value for difficulty voting is not equal between Democrats and Republicans (p=.006). A comparison between parties on the Likert scale reveals that the difference in difficulty voting between Democrats and Republicans varies in scale and in direction across each difficulty group. Therefore, it is difficult to say which party experiences more overall difficulty voting. However, by examining a row-wise proportion table of party and difficulty, we can see that among respondents who experienced any degree difficulty (groups 2-5), Republicans reported higher degrees of difficulty (groups 4,5) in greater proportion compared to Democrats, whereas Democrats reported lower degrees of difficulty (groups 2,3) in greater compared to Republicans.

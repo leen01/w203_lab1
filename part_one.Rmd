@@ -1,7 +1,7 @@
 ---
 title: "Lab One, Part One"
-author: "PUT YOUR GROUP NAMES HERE"
-date: "PUT THE SUBMISSION DATE HERE"
+author: "Ange Iradukunda, Nicholas Lee, Will Dudek"
+date: "6/28/2022"
 output:
   pdf_document:
     toc: true
@@ -17,7 +17,105 @@ output:
 
 \newpage
 ## Test Assumptions
+
 ### World Happiness
+```{r}
+library(car)
+library(dplyr)  
+library(ggplot2)
+library(tidyverse)
+library(GGally)
+library(magrittr)
+
+file <-"~/Desktop/happiness_whr_1.csv"
+happiness_df<-read.csv(file)
+happiness_df[is.na(happiness_df)] = 0
+summary(happiness_df)
+
+# find the most correlated variables of life.ladder
+ggcorr(happiness_df, label = TRUE, label_size = 2.9, hjust = 1, layout.exp = 2)
+
+# classifying High and Low GDP based on happiness score mean
+happiness_df$classification = ifelse(happiness_df$Log.GDP.per.capita> mean(happiness_df$Log.GDP.per.capita),'High GDP','Low GDP')
+#head(happiness_df)
+
+# country vs happiness score sorted 
+happiness_df <- happiness_df %>% select(Country.name , Life.Ladder,Log.GDP.per.capita,classification)
+#head(happiness_df) 
+
+# examine the relationship between life ladder and log GDP
+boxplot(happiness_df$Life.Ladder  ~  happiness_df$Country.name)
+
+#the boxplots to indicate a difference in the mean scores
+happiness_df %>% boxplot(happiness_df$Life.Ladder  ~classification, data = ., ylab = "Life Ladder")
+
+# Summary statistics of the happiness scores for the two groups(High GDP & Low GDP) 
+happiness_df %>% group_by(classification) %>% summarise(Min = min(Life.Ladder,na.rm = TRUE),
+                                                    Q1 = quantile(Life.Ladder,probs = .25,na.rm = TRUE),
+                                                    Median = median(Life.Ladder,na.rm = TRUE),
+                                                    Q3 = quantile(Life.Ladder,probs = .75,na.rm = TRUE),
+                                                    Max = max(Life.Ladder,na.rm = TRUE),
+                                                    Mean = mean(Life.Ladder, na.rm = TRUE),
+                                                    SD = sd(Life.Ladder, na.rm = TRUE),
+                                                    n = n(),
+                                                    Missing = sum(is.na(Life.Ladder))) -> table1
+knitr::kable(table1)
+
+# to investigate normality  for high GDP 
+happiness_df_high_gdp <- happiness_df %>% filter(classification == "High GDP")
+happiness_df_high_gdp$Life.Ladder %>% qqPlot(dist="norm", main = "QQ plot - Happiness Scores - High GDP", col= 'dark blue', col.lines = 'sky blue')
+
+# to investigate normality  for low GDP 
+happiness_df_low_gdp<- happiness_df %>% filter(classification == "Low GDP")
+happiness_df_low_gdp$Life.Ladder %>% qqPlot(dist="norm", main = "QQ plot - Happiness Scores - Low GDP", col= 'red', col.lines = 'pink')
+
+# Testing equal variances
+leveneTest( Life.Ladder~ classification , data =happiness_df)
+
+t.test(Life.Ladder ~ classification,data = happiness_df,var.equal = TRUE,alternative = "two.sided")
+
+```
+
+The file datasets/Happiness_WHR.csv is subsetted from the World Happiness Report, a yearly publication that uses data from the Gallup World Poll surveys. The variable life ladder is a measure of happiness, described in the FAQ as follows:
+This is called the Cantril ladder: it asks respondents to think of a ladder, with the best possible life for them being a 10, and the worst possible life being a 0. They are then asked to rate their own current lives on that 0 to 10 scale. The rankings are from nationally representative samples, for the years 2018-2020.
+You would like to know whether people in countries with high GDP per capita (higher than the mean) are more happy or less happy than people in countries with low GDP (lower than the mean).
+List all assumptions for a two-sample t-test. Then evaluate each assumption, presenting evidence based on your background knowledge, visualizations, and numerical summaries.
+All assumptions for a two-sample t-test:
+Two sample t-test assumes that the samples being compared are independent of each other
+The data for both samples are normally distributed 
+The two samples have equal variance 
+
+From Mark:
+Data is non- metric 
+High GDP and low GDP are the grouping variables
+
+ Looking at the plot above we can see that Log.GDP.per.capita, Social.support & Healthy.life.expectancy.at.birth has the most positive correlation with Life.Ladder. Life.Ladder is the happiness score of each country which is our main focus.
+
+To present the evidence that the first assumption that the variables are independent is met. We used the boxplots to indicate a difference in the mean scores. There are no outliers in the life ladder scores for High GDP and Low GDP and it looks like High GDP tends to have a higher happiness score. Assessment is used to determine if the two sample t-test differences are statistically significant.
+
+
+Summary statistics of the happiness scores for the two groups(High GDP & Low GDP) are displayed below:
+
+A review of the summary statistics shows  that the mean score of the High GDP is higher than the Low GDP.
+There is no missing data in the data set
+The median for the High GDP is 1.14 points higher than the mean indicating a left skew in the distribution
+The minimum for Low GDP is more than 1 point lower than High GDP, indicating a long tail
+Even if the sample sizes for two groups are greater than 30, we would like to plot for both groups to further investigate for normality:
+
+The data points fall close to the diagonal lines for both Low GDP and high GDP which  indicates the overall normal distribution.
+Since  the sample size is large, the sampling distribution of a mean will be approximately normally distributed, regardless of the underlying population distribution
+We would like to use Levene’s test to test the assumption of equal variance:
+The null hypothesis is that H0: μ1 - μ2=0(the difference in the mean happiness score between High GDP and Low GDP is 0)
+The alternative hypothesis:
+HA: μ1 - μ2 ≠0 (the difference in the mean happiness score between High GDP and Low GDP is not 0)
+
+The p-value for the levene’s test of equal variance for happiness for Low GDP and high GDP  was p=0.4347. We find P < 0.05, therefore it’s not safe to assume equal variance
+
+
+
+
+Looking at the bar chart above, we can see countries and their happiness score 
+
 
 ### Legislators
 ####
@@ -25,70 +123,182 @@ output:
   # Purpose: Lab 1
   # Date: 06/20/2022
 ####
-  # Libraries
+# Libraries
+```{r}
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
+```
 
 #### Question: 
-  # You would like to test whether Democratic or Republican senators are older. 
-  # List all assumptions for a Wilcoxon rank-sum test (using the Hypothesis of Comparisons). 
-  # Then evaluate each assumption, presenting evidence based on your background knowledge, 
-  # visualizations, and numerical summaries
+You would like to test whether Democratic or Republican senators are older. List all assumptions for a Wilcoxon rank-sum test (using the Hypothesis of Comparisons). Then evaluate each assumption, presenting evidence based on your background knowledge, visualizations, and numerical summaries
 
-  # Wilcoxon Rank-sum test: 
-  # Data must at least be ordinal
-  # Not too many ties: True
-  # Grouping variable defined: Party
-  # Not a substantial difference between group sizes: True
-  # IID across samples, may be a problem with geography:
-    # Some areas in the US are typically right or left leaning so there might be a bias for the state to select senators from a certain party. 
-    # 
-  # Continuous data, i.e. non binary, assumption met: 
-    # The data is finite since people, but could be born on any day, since we are given a date but not a time. This is discrete data I believe as measured
-
+Wilcoxon Rank-sum test: 
+1. Data must at least be ordinal
+2. Not too many ties: True
+3. Grouping variable defined: Party
+4. Not a substantial difference between group sizes: True
+5. IID across samples, may be a problem with geography:
+  5.1 Some areas in the US are typically right or left leaning so there might be a bias for the state to select senators from a certain party. 
+6. Continuous data, i.e. non binary, assumption met: 
+  6.1The data is finite since people, but could be born on any day, since we are given a date but not a time. This is discrete data I believe as measured
+```{r}
+setwd("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1")
 data <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/legislators-current.csv", 
                  sep = ",", header = T)
 
-  # Quick view into dataset.
-colnames(data)
-summary(data)
-
-  # create a column that gets the senators age from birthday
+# create a column that gets the senators age from birthday
 data$age = as.numeric(difftime(Sys.Date(), data$birthday,  units = 'weeks'))/52.25
+str(data) # description the data columns and types
+senators <- data[data$type == "sen" & data$party %in% c('Democrat', 'Republican'),]
+# histograms for the senators
+ggplot(senators[senators$party == 'Democrat',], aes(x = age)) + geom_histogram(bins = 20)
+ggplot(senators[senators$party == 'Republican',], aes(x = age)) + geom_histogram(bins = 20)
 
-  # checking mean age of groups
-data %>% 
+# graph for shape and spread of data
+ggplot(senators, aes(y = age, x = party)) +
+  geom_boxplot(aes(color = party, fill = party),alpha = 0.2) +
+  scale_color_manual(values = c("#0080FF", "#FF0000")) +
+  scale_fill_manual(values = c("#0080FF", "#FF0000"))
+
+# Quick view into dataset.
+colnames(senators)
+summary(senators %>% group_by(c(age, party)))
+
+# checking n, mean, std, and range age of groups
+report <- senators %>% 
   group_by(party) %>% 
   summarize(
-    n = length(age),
-    mean_age = mean(age),
-    std = sd(age)
+    n = round(length(age)),
+    mean_age = round(mean(age)),
+    std = round(sd(age)),
+    round(min(age)), 
+    round(max(age))
   )
-  # Shape of the data
-aggregate(age ~ party, data = data, mean)
-aggregate(age ~ party, data = data, sd)
-  # Test assumption that the size is not substantially different between groups
-aggregate(age ~ party, data = data, length)
-aggregate(age ~ party, data, FUN = function(x) sum(x != "N/A"), na.action = NULL)
+report
+write.csv(report, "Summary stats.csv")
 
-  # Checking for number of ties aka same birthday
-length(unique(data$birthday))
-n_table <- data.frame(table(data$age))
+# Checking for number of ties aka same birthday
+length(unique(senators$birthday))
+n_table <- data.frame(table(senators$age))
+arrange(data[duplicated(senators$birthday),])
+length(unique(senators$birthday))
+n_occur <- data.frame(table(senators$birthday))
+n_occur[n_occur$Freq > 1,]
+senators[senators$birthday %in% n_occur[n_occur$Freq > 1,],]
 
-#### Visualizations
+b_dup <- as.data.frame(senators %>% group_by(birthday) %>% summarise(n = sum(n())) %>% filter(n>1) %>% select(birthday))
+
+b_dup <- senators[senators$birthday %in% b_dup$birthday,] %>% select(birthday, party)
+count(b_dup)
+count(data)
+
+e_dup <- tabyl(b_dup, birthday, party, show_na = FALSE) 
+write.csv(e_dup[e_dup$birthday %in% b_dup$birthday,], "1.3.2_duplicates.csv")
+
+#### Visualizations ####
 data$year <- format(as.Date(data$birthday, format="%Y-%m-%d"),"%Y")
 year_bins <- length(unique(data$year))
-g <- ggplot(data, aes(x = age, color = party)) + geom_histogram(bins = 20, alpha = 0.5)
-data %>% group_by(party) %>% summarize(mean(data$age))[1]
-g + geom_vline(xintercept = c(data %>%group_by(party) %>% summarize( mean_age = mean(age))))
-g
-  # add a mean line for each group
+
+my_colors <- c('blue', 'red', 'green')
+names(my_colors) <- levels(factor(c(levels(refined_df$party))))
+my_scale <- scale_fill_manual(name = 'Group', values = my_colors)
+ggplot(data = senators, aes(x = party, y = age, fill=factor(party))) + geom_boxplot() + ggtitle("Age Quantiles of Parties")
+refined_df <- data[data$party %in% c('Democrat', 'Republican'),]
+g <- ggplot(refined_df, aes(x = age, color = party)) + geom_histogram(bins = 20, alpha = 0.5)
+g + my_scale
+
+qqnorm(refined_df[refined_df$party == 'Democrat',]$age, main='Normal')
+qqline(refined_df[refined_df$party == 'Democrat',]$age)
+
+qqnorm(refined_df[refined_df$party == 'Republican',]$age, main='Normal')
+qqline(refined_df[refined_df$party == 'Republican',]$age)
+
+```
 #### Answer
+The question is to test whether Democratic or Republican senators are older. List all assumptions for a Wilcoxon rank-sum test (using the Hypothesis of Comparisons). Then evaluate each assumption, presenting evidence based on your background knowledge, visualizations, and numerical summaries. 
+The assumptions for the Wilcoxon rank-sum test: (From 14.2 Devore
+The variables are independent and are from continuous distributions that are the same shape and spread with a possible difference in means (p.766) 
+The null hypothesis is that $\mu_1$ - $\mu_2$ = $\Delta_0$. The X distribution is shifted by the amount $\Delta_0$  to the right of the Y distribution; whereas when $H_0$  is false, the shift is by an amount other than $\Delta_0$.
+For testing if the difference between the two groups are equal to some critical constant “c” is used to determine if the compound value w is too extreme. C should be determined to give the test the desired $\alpha$ value. 
+From Mark: 
+Data must at least be ordinal
+Not too many ties
+Grouping variable defined 
+Not a substantial difference between group sizes
+IID across samples, may be a problem with geograph
+Continuous data, i.e. non binary, assumption met
+The data in this case is discrete metric data given the precision down to the day a senator was born. The data is not continuous since we are confined to integers and a certain time backwards in time since people only live so long. 
+To assess the age of the senators in years, the number of weeks between their birthday and the current date was divided by 52.25 to account for leap years. 
+Between the two parties, none of the senators have the same agein the dataset which meets the assumption to not have too many ties. 
+The size of the data is greater than 30 for each group. 
+The grouping variable is well defined, as it is the party for each person, and there are only three choices, Democrat, Republican and Independent. The null hypothesis is that the mean age fo the two parties are equal $\mu_D$ - $\mu_R$ = 0. Testing to see if one party is older than the other or if one part is younger than the other which would be a two tailed test since if one group is younger it would imply that the other group is older. Since $\mu_D$ < $\mu_R$ or $\mu_D$ > $\mu_R$. Or would it be that $\mu_D$ - $\mu_R$ > 0 or $\mu_D$ - $\mu_R$ < 0. 
+There may be differences within the groups, but as far as age politicians are generally older with years of experiences. I think it would be safe to assume that the ages within the two parties are independent of each other.  I think there might be some bias that the Republican party is the older party since it typically holds older views. 
 
+EDA: 
+The boxplot above to show the shape and spread of the data for each group. The quartiles for the Republican party fall within the Democrat party while the mean for the democrat party is slightly lower. There are some outliers based on the boxplot for the republican party on both ends of the range. 
 
+There is not a substantial difference in sample size between the two groups which meets the expectation for sample size. 
+
+Factors that can influence the IID of this sample set are the selection of senators is voted upon by the population. Regions of the United States are affiliated with a certain party. Senators running under a party that aligns with the attitude of the state may be more likely to be elected and this could influence the group size. Generally, it appears that the senators are generally older and that is likely similar views in the public. The underlying influence may be average age of senators coming from each state. 
+
+Those involved in politics from the general population are likely older than other careers. Since it also requires experience and building a reputation in politics would explain why the average population is older. The distribution of the age for the two parties looks to be relatively normally distributed, with a large peak in both parties around 50 years of age. 
 
 ### Wine and health
+```{r}
+library(car)
+library(dplyr)  
+library(ggplot2)
+library(tidyverse)
+library(GGally)
+file <-"~/Desktop/happiness_whr_1.csv"
+happiness_df<-read.csv(file)
+happiness_df[is.na(happiness_df)] = 0
+summary(happiness_df)
+
+# find the most correlated variables of life.ladder
+ggcorr(happiness_df, label = TRUE, label_size = 2.9, hjust = 1, layout.exp = 2)
+
+# classifying High and Low GDP based on happiness score mean
+happiness_df$classification = ifelse(happiness_df$Log.GDP.per.capita> mean(happiness_df$Log.GDP.per.capita),'High GDP','Low GDP')
+#head(happiness_df)
+
+# country vs happiness score sorted 
+happiness_df <- happiness_df %>% select(Country.name , Life.Ladder,Log.GDP.per.capita,classification)
+#head(happiness_df) 
+
+# examine the relationship between life ladder and log GDP
+boxplot(happiness_df$Life.Ladder  ~  happiness_df$Country.name)
+
+#the boxplots to indicate a difference in the mean scores
+happiness_df %>% boxplot(happiness_df$Life.Ladder  ~classification, data = ., ylab = "Life Ladder")
+
+# Summary statistics of the happiness scores for the two groups(High GDP & Low GDP) 
+happiness_df %>% group_by(classification) %>% summarise(Min = min(Life.Ladder,na.rm = TRUE),
+                                                    Q1 = quantile(Life.Ladder,probs = .25,na.rm = TRUE),
+                                                    Median = median(Life.Ladder,na.rm = TRUE),
+                                                    Q3 = quantile(Life.Ladder,probs = .75,na.rm = TRUE),
+                                                    Max = max(Life.Ladder,na.rm = TRUE),
+                                                    Mean = mean(Life.Ladder, na.rm = TRUE),
+                                                    SD = sd(Life.Ladder, na.rm = TRUE),
+                                                    n = n(),
+                                                    Missing = sum(is.na(Life.Ladder))) -> table1
+knitr::kable(table1)
+
+# to investigate normality  for high GDP 
+happiness_df_high_gdp <- happiness_df %>% filter(classification == "High GDP")
+happiness_df_high_gdp$Life.Ladder %>% qqPlot(dist="norm", main = "QQ plot - Happiness Scores - High GDP", col= 'dark blue', col.lines = 'sky blue')
+
+# to investigate normality  for low GDP 
+happiness_df_low_gdp<- happiness_df %>% filter(classification == "Low GDP")
+happiness_df_low_gdp$Life.Ladder %>% qqPlot(dist="norm", main = "QQ plot - Happiness Scores - Low GDP", col= 'red', col.lines = 'pink')
+
+# Testing equal variances
+leveneTest( Life.Ladder~ classification , data =happiness_df)
+
+t.test(Life.Ladder ~ classification,data = happiness_df,var.equal = TRUE,alternative = "two.sided")
+
+```
 
 ### Attitudes toward the religious
 The question is whether the US population feels more positive towards Protestants or towards Catholics. 
@@ -105,33 +315,44 @@ The question is whether the US population feels more positive towards Protestant
 10. Continuous data or continous form, ie. non binary data.
 #### evaluation of  T-test assumptions: 
 ```{r}
-# set working directory
-setwd("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets")
 # load the dataset
-rel_df <- read.csv("./GSS_religion.csv")
+rel_df <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/GSS_religion.csv")
 ```
 1. Metric scale
 - The data is not on a metric scale. It appears so by using a number to gauge people's feelings about the two different religions. The data is ordinal, like a Likert scale, where 0 - 100 is dislike to like and all the numbers in between can vary. There is not set interval or measurement between 1 degree in this scale. There is no way to generalize what one degree is across different people. It is not continuous becauase people are not likley to give a infinitely long number. We are working with interval numbers. It detracts from the nuance in the data, but I would suggest that the data be recoded so that less than 50 as negative (0) and greater than 50 is a positive (1) for prottemp and cathtemp. 
+
 2. Requires data support basic math operations
-- The data as coded would support basic math operations. 
+- The data as coded would support basic math operations since it contains values between 0 - 100. 
+
 3. Requires data supports calculation of mean and variance
 - We could calculate the mean and variance as coded. Because this data is not metric, the meaning
+
 4. IID across all samples
 - According to https://www.thearda.com/Archive/Files/Descriptions/GSS2004.asp
 - "(i) the construction of a new list-assisted sampling frame for 72% of the population; (ii) an increase in the size of the certainty stratum (the proportion of the population covered by certainty area selections); (iii) designation of new primary sampling units (PSUs) for the certainty stratum; (iv) designation of new secondary sampling units (SSUs) for the remaining "urban" areas; and (v) designation of larger SSUs for the remaining areas."
-- The collection proceedure were conducting 90 minute interviews with people. 
+- The collection proceedure were conducting 90 minute interviews with people.
+
 5. Dependence within samples
 - It is taken from the same person and the regligions are closely related, under the Christianity umbrella, so attitudes are likley similar depending on the person. Someone who is a christian might be either protestant or catholic and they may have a bias towards one or the other. This would be an assumption with the given dataset. 
+
 6. Same number of samples for both measures
 ```{r}
 library(dplyr)
-rel_df %>% summarize(
-  n_prottemp = length(prottemp),
-  n_cathtemp = length(cathtemp),
-  mean_prottemp = mean(prottemp),
-  mean_cathtemp = mean(cathtemp)
-)
-summary(df2)
+library(reshape)
+
+d <- melt(rel_df, measure.vars = c('prottemp', 'cathtemp'), variable.name = "religion")
+d %>%  group_by(variable) %>% summarise(
+    n = length(value),
+    min = min(value),
+    Q1 = quantile(value, prob = 0.25, na.rm = TRUE),
+    Median = quantile(value, prob = 0.50, na.rm = TRUE),
+    Q3 = quantile(value, prob = 0.75, na.rm = TRUE),
+    Max = max(value),
+    Mean = mean(value, na.rm = TRUE),
+    SD = sd(value, na.rm = TRUE),
+    Missing = sum(is.na(value)) -> table1,
+  )
+
 ```
 There are the same number of measurements for both variables. 
 7. Sample size is greater than or equal to 30 not too much skew for CLT
@@ -140,37 +361,26 @@ There are the same number of measurements for both variables.
 # Checking for skew
 library(ggplot2)
 library(reshape)
-d <- melt(df2, measure.vars = c('prottemp', 'cathtemp'), variable.name = "religion")
+d <- melt(rel_df, measure.vars = c('prottemp', 'cathtemp'), variable.name = "religion")
 g <- ggplot(data = d, aes(x = variable, y = value))
 g + geom_boxplot()
 ```
 8. Assertion in null hypothesis about mean difference
+The question is asking whether there are more positive attitudes towards protestant or towards catholics. Another way to ask this could be, is the mean temperature for protestant or catholics higher. In which case we could look at the difference between protestants and catholics. If $/mu_p$- $/mu_c$== 0 then there is no difference. If $/mu_p$- $/mu_c$ < 0 then protestants have more positive attitudes otherwise catholitcs are have more positive attidues in the sample. In this case the null hypothesis would be the attitudes towards the two religions are the same. One way to test this would be to compare the mean value of the two variables. Because there is a arbitrary unit between degrees on this scale that the data could be. The random variables gauge positive attitudes as a score above 50 as warm and favorable while below 50 is negative, and do not care much for that group. Assuming less than 50 is negative. We could compare across the entire random variables to gauge whether the mean value for one random variable is higher than the other. 
 
 9. Not dramatically different distributions in shapes across random variables
 -Based on the boxplot there is no dramatic difference in the shape of the measurements. Upon further exploration it appears that people generally picked whole numbers. The attitudes appear to be shifted left, most of the values are on the positive side. 
 ```{r}
 # ggplot(data = d, aes(x = value, fill = variable)) +geom_bar(position = 'dodge', width = 4)
 ggplot(data = d, aes(x = value, color = variable)) +geom_histogram()
-```
-```{r}
 
-count(df2[df2$prottemp < 50,])
-count(df2[df2$prottemp > 50,])
-count(df2[df2$prottemp == 50,])
+```
+
+```{r}
+count(rel_df[rel_df$prottemp < 50,])
+count(rel_df[rel_df$prottemp > 50,])
+count(rel_df[rel_df$prottemp == 50,])
 ```
 10. Continuous data or continous form, ie. non binary data.
 -The variables prottemp and cathtemp are not continuous, they are ordinal, so this assumption is not met. 
-##### Load data
-df2 <- read.csv("/Users/Nick/Documents/Berkeley/Classes/Summer_2022/W203/lab_1/datasets/GSS_religion.csv", sep = ",", header = T)
-1. Metric scale
-2. Requires data support basic math operations
-3. Requires data supports calculation of mean and variance
-4. IID across all samples
-5. Dependence within samples
-6. Same number of samples for both measures
-7. Sample size is greater than or equal to 30 not too much skew for CLT
-8. Assertion in null hypothesis about mean difference
-9. Not dramatically different distributions in shapes across random variables
-10. Continuous data or continous form, ie. non binary data.
-
 
