@@ -1,6 +1,6 @@
 ---
 title: "Lab One, Part One"
-author: "Ange Iradukunda, Nicholas Lee, Will Dudek"
+author: "Nicholas Lee, Ange Iradukunda, Will Dudek"
 date: "6/28/2022"
 output:
   pdf_document:

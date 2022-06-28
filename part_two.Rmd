@@ -46,7 +46,7 @@ nrow_original <- nrow(df)
 # Variables
 group_rv <- 'V201228'
 main_rv <- 'V202119'
-subq_rv <- c(grep("V202120.", colnames(df), value = TRUE), 'V202121', 'V202066', 'V202117')
+subq_rv <- c(grep("V202120.", colnames(df), value = TRUE), 'V202121', 'V202122', 'V202066', 'V202117')
 full_rv_list <- c(group_rv, main_rv, subq_rv)
 ```
 
@@ -197,8 +197,10 @@ kable(
   booktabs = TRUE
 )
 ```
+
 ```{r}
 #plots
+plot_vars <- c()
 # for (i in full_rv_list){
 # g <- ggplot(data = wdf, aes(x = sjlabelled::as_label(.data[[i]]), fill = sjlabelled::as_label(.data[[group_rv]])))
 # g <- g + geom_bar(position = position_dodge()) + 
@@ -222,7 +224,29 @@ Proceeding with a Wilcoxon Rank-Sum test, our null hypothesis is:
   \textbf{Null Hypothesis:} \textit{The median of the outcome variable, ‘difficulty voting’ is equal between Democrats and Republicans}
 \end{quote}
 ```
-The test results present evidence that the median Likert scale value for difficulty voting is not equal between Democrats and Republicans (p=.006). A comparison between parties on the Likert scale reveals that the difference in difficulty voting between Democrats and Republicans varies in scale and in direction across each difficulty group. Therefore, it is difficult to say which party experiences more overall difficulty voting. However, by examining a row-wise proportion table of party and difficulty, we can see that among respondents who experienced any degree difficulty (groups 2-5), Republicans reported higher degrees of difficulty (groups 4,5) in greater proportion compared to Democrats, whereas Democrats reported lower degrees of difficulty (groups 2,3) in greater compared to Republicans. 
+
+```{r}
+### Party and difficulty_voting
+# Wilcoxon Rank-Sum Test
+party <- sjlabelled::as_label(wdf[[group_rv]], drop.levels = TRUE)
+difficult_voting <- wdf[[main_rv]]
+waitTime <- sjlabelled::as_label(wdf[['V202121']], drop.levels = TRUE)
+travelTime <- wdf[['V202122']]
+
+t1 <- wilcox.test(difficult_voting ~ party, data=wdf)
+# row-wise proportion table
+round(prop.table(table(party, difficult_voting),1),2)
+### Party and Wait Time
+# Wilcoxon Rank-Sum Test
+t2 <- wilcox.test(waitTime ~ party, data=wdf, exact = FALSE)
+# row-wise proportion table
+round(prop.table(table(party, waitTime),1),2)
+### Party and Travel Time
+# Wilcoxon Rank-Sum Test
+t3 <- wilcox.test(travelTime ~ party, data=wdf, exact = FALSE)
+```
+
+The test results present evidence that the median Likert scale value for difficulty voting is not equal between Democrats and Republicans (p=.006) (p = . A comparison between parties on the Likert scale reveals that the difference in difficulty voting between Democrats and Republicans varies in scale and in direction across each difficulty group. Therefore, it is difficult to say which party experiences more overall difficulty voting. However, by examining a row-wise proportion table of party and difficulty, we can see that among respondents who experienced any degree difficulty (groups 2-5), Republicans reported higher degrees of difficulty (groups 4,5) in greater proportion compared to Democrats, whereas Democrats reported lower degrees of difficulty (groups 2,3) in greater compared to Republicans. 
 
 	Still, these results are fairly inconclusive when it comes to addressing the question of “Did Democrats or Republicans experience more difficulty voting?”, so we decided to explore some variables that may point to more specific reasons for difficulty voting. 
 
